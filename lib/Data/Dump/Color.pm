@@ -7,7 +7,7 @@ use subs qq(dump);
 
 require Exporter;
 *import = \&Exporter::import;
-@EXPORT = qw(dd ddx);
+@EXPORT = qw(dd dde ddx ddxe);
 @EXPORT_OK = qw(dump pp dumpf quote);
 
 use overload ();
@@ -181,12 +181,27 @@ sub dd {
     print dump(@_), "\n";
 }
 
+sub dde {
+    print dump(@_), "\n";
+    exit;
+}
+
 sub ddx {
     my(undef, $file, $line) = caller;
     $file =~ s,.*[\\/],,;
     my $out = _col(linum=>"$file:$line: ") . dump(@_) . "\n";
     $out =~ s/^/# /gm;
     print $out;
+}
+
+sub ddxe {
+    my(undef, $file, $line) = caller;
+    $file =~ s,.*[\\/],,;
+    my $out = _col(linum=>"$file:$line: ") . dump(@_) . "\n";
+    $out =~ s/^/# /gm;
+    print $out;
+
+    exit;
 }
 
 sub dumpf {
