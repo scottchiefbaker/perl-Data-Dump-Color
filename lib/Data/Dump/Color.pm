@@ -15,14 +15,15 @@ $DEBUG = 0;
 
 use overload ();
 use vars qw(%seen %refcnt @fixup @cfixup %require $TRY_BASE64 @FILTERS $INDENT);
-use vars qw(%COLORS $COLOR $INDEX);
+use vars qw(%COLORS %COLORS256 $COLOR $INDEX $DEPTH);
 
 use Term::ANSIColor;
 require Win32::Console::ANSI if $^O =~ /Win/;
 
 $TRY_BASE64 = 50 unless defined $TRY_BASE64;
-$INDENT = "  " unless defined $INDENT;
-$INDEX = 1 unless defined $INDEX;
+$INDENT     = "  " unless defined $INDENT;
+$INDEX      = 1 unless defined $INDEX;
+$DEPTH      = terminal_color_depth();
 
 %COLORS = (
     Regexp  => 'yellow',
@@ -38,14 +39,44 @@ $INDEX = 1 unless defined $INDEX;
     symbol  => 'cyan',
     linum   => 'black on_white', # file:line number
 );
+
+%COLORS256 = (
+    Regexp  => 135,
+    undef   => 124,
+    number  => 27,
+    float   => 51,
+    string  => 226,
+    object  => 10,
+    glob    => 10,
+    key     => 202,
+    comment => 34,
+    keyword => 20,
+    symbol  => 51,
+    linum   => 10,
+);
+
 my $_colreset = color('reset');
 sub _col {
     my ($col, $str) = @_;
     if ($COLOR // $ENV{COLOR} // (-t STDOUT)) {
-        color($COLORS{$col}) . $str . $_colreset;
+        if ($DEPTH == 256) {
+            set_fcolor($COLORS256{$col}) . $str . $_colreset;
+        } else {
+            color($COLORS{$col}) . $str . $_colreset;
+        }
     } else {
         $str;
     }
+}
+
+sub set_fcolor {
+	my $c = shift();
+
+	my $ret = '';
+	if (!defined($c)) { $ret = "\e[0m"; } # Reset the color
+	else { $ret = "\e[38;5;${c}m"; }
+
+	return $ret;
 }
 
 sub dump
@@ -635,6 +666,19 @@ sub is_float {
     my $ret = $val =~ m/^-?\d+\.\d+$/;
 
     return $ret;
+}
+
+sub terminal_color_depth {
+    my $cmd  = "tput colors";
+    my $out  = int(`$cmd`);
+    my $exit = $? >> 8;
+
+    # If we don't get anything from tput, assume 8 colors
+    if ($exit != 0 || !$out) { 
+       return 8;
+    }
+
+    return $out;
 }
 
 sub str {
