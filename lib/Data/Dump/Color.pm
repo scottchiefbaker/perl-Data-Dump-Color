@@ -36,6 +36,7 @@ $DEPTH      = terminal_color_depth();
     comment => 'green',
     keyword => 'blue',
     symbol  => 'cyan',
+    strnum  => 'bright_red',
     linum   => 'black on_white', # file:line number
 );
 
@@ -52,6 +53,7 @@ $DEPTH      = terminal_color_depth();
     comment => 34,
     keyword => 21,
     symbol  => 51,
+    strnum  => 198,
     linum   => 10,
 );
 
@@ -362,8 +364,14 @@ sub _dump
 	    }
 	    elsif (my $ntype = looks_like_number($$rval)) {
 		my $val = $ntype < 20 ? qq("$$rval") : $$rval;
-                my $col = $ntype =~ /^(5|13|8704)$/ ? "float":"number";
-                $out  = $val;
+		my $col = $ntype =~ /^(13|8704)$/ ? "float":"number";
+
+		# 1 = quoted intger, 5 = quoted float
+		if ($ntype == 1 || $ntype == 5) {
+		    $col = "strnum";
+		}
+
+		$out  = $val;
 		$cout = _col($col => $val);
 	    }
 	    else {
