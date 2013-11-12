@@ -10,95 +10,75 @@ require Exporter;
 @EXPORT = qw(dd ddx);
 @EXPORT_OK = qw(dump pp dumpf quote);
 
+# VERSION
+$DEBUG = 0;
+
 use overload ();
 use vars qw(%seen %refcnt @fixup @cfixup %require $TRY_BASE64 @FILTERS $INDENT);
-use vars qw(%COLORS %COLORS256 $COLOR $INDEX $DEPTH);
+use vars qw(%COLOR_THEMES %COLORS $COLOR $COLOR_THEME $COLOR_DEPTH $INDEX);
 
 use Term::ANSIColor;
 require Win32::Console::ANSI if $^O =~ /Win/;
 use Scalar::Util qw(looks_like_number);
 
-$DEBUG      = 0;
 $TRY_BASE64 = 50 unless defined $TRY_BASE64;
-$INDENT     = "  " unless defined $INDENT;
-$INDEX      = 1 unless defined $INDEX;
-$DEPTH      = terminal_color_depth();
+$INDENT = "  " unless defined $INDENT;
+$INDEX = 1 unless defined $INDEX;
 
-%COLORS = (
-    Regexp  => 'yellow',
-    undef   => 'bright_red',
-    number  => 'bright_blue', # floats can have different color
-    float   => 'cyan',
-    string  => 'bright_yellow',
-    object  => 'bright_green',
-    glob    => 'bright_cyan',
-    key     => 'magenta',
-    comment => 'green',
-    keyword => 'blue',
-    symbol  => 'cyan',
-    linum   => 'black on_white', # file:line number
+%COLOR_THEMES = (
+    default16 => {
+        colors => {
+            Regexp  => 'yellow',
+            undef   => 'bright_red',
+            number  => 'bright_blue', # floats can have different color
+            float   => 'cyan',
+            string  => 'bright_yellow',
+            object  => 'bright_green',
+            glob    => 'bright_cyan',
+            key     => 'magenta',
+            comment => 'green',
+            keyword => 'blue',
+            symbol  => 'cyan',
+            linum   => 'black on_white', # file:line number
+        },
+    },
+    default256 => {
+        color_depth => 256,
+        colors => {
+            Regexp  => 135,
+            undef   => 124,
+            number  => 27,
+            float   => 51,
+            string  => 226,
+            object  => 10,
+            glob    => 10,
+            key     => 202,
+            comment => 34,
+            keyword => 21,
+            symbol  => 51,
+            linum   => 10,
+        },
+    },
 );
 
-# Numbers from http://www.perturb.org/code/term-colors.pl
-%COLORS256 = (
-    Regexp  => 135,
-    undef   => 124,
-    number  => 27,
-    float   => 51,
-    string  => 226,
-    object  => 10,
-    glob    => 10,
-    key     => 202,
-    comment => 34,
-    keyword => 21,
-    symbol  => 51,
-    linum   => 10,
-);
+$COLOR_THEME = ($ENV{TERM} // "") =~ /256/ ? 'default256' : 'default16';
+$COLOR_DEPTH = $COLOR_THEMES{$COLOR_THEME}{color_depth} // 16;
+%COLORS      = %{ $COLOR_THEMES{$COLOR_THEME}{colors} };
 
 my $_colreset = color('reset');
 sub _col {
     my ($col, $str) = @_;
-
-    # If we're asking for color, and we're outptting to STDOUT
+    my $colval = $COLORS{$col};
     if ($COLOR // $ENV{COLOR} // (-t STDOUT)) {
-        if ($DEPTH >= 256) {
-            set_fcolor($COLORS256{$col}) . $str . $_colreset;
+        #say "D:col=$col, COLOR_DEPTH=$COLOR_DEPTH";
+        if ($COLOR_DEPTH >= 256 && $colval =~ /^\d+$/) {
+            return "\e[38;5;${colval}m" . $str . $_colreset;
         } else {
-            color($COLORS{$col}) . $str . $_colreset;
+            return color($colval) . $str . $_colreset;
         }
     } else {
-        $str;
+        return $str;
     }
-}
-
-sub set_fcolor {
-    my $c = shift();
-
-    my $ret = '';
-    if (!defined($c)) { $ret = "\e[0m"; } # Reset the color
-    else { $ret = "\e[38;5;${c}m"; }
-
-    return $ret;
-}
-
-sub terminal_color_depth {
-    # If we're not attached to an STDOUT don't go any further
-    if (!-t STDOUT) {
-        return 8;
-    }
-
-    # This is only good on Linux/Mac right now
-    # Windows will always return 8 colors...
-    my $cmd  = "tput colors"; # FIXME
-    my $out  = int(`$cmd`);
-    my $exit = $? >> 8;
-
-    # If we don't get anything from tput, assume 8 colors
-    if ($exit != 0 || !$out) { 
-       return 8;
-    }
-
-    return $out;
 }
 
 sub dump
