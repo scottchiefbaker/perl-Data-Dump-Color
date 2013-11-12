@@ -165,7 +165,8 @@ sub dd {
 
 sub dde {
     print dump(@_), "\n";
-    exit;
+
+    die;
 }
 
 sub ddx {
@@ -183,7 +184,7 @@ sub ddxe {
     $out =~ s/^/# /gm;
     print $out;
 
-    exit;
+    die;
 }
 
 sub dumpf {
