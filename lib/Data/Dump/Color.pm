@@ -886,3 +886,5 @@ L<SHARYANTO::Role::ColorTheme>.
 L<Data::Dump>, L<JSON::Color>, L<YAML::Tiny::Color>
 
 =cut
+
+# vim: tabstop=8 shiftwidth=4 expandtab autoindent
