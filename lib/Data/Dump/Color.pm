@@ -7,7 +7,7 @@ use subs qq(dump);
 
 require Exporter;
 *import = \&Exporter::import;
-@EXPORT = qw(dd ddx);
+@EXPORT = qw(dd dde ddx ddxe);
 @EXPORT_OK = qw(dump pp dumpf quote);
 
 # VERSION
@@ -40,6 +40,7 @@ $INDEX = 1 unless defined $INDEX;
             keyword => 'blue',
             symbol  => 'cyan',
             linum   => 'black on_white', # file:line number
+            strnum  => 'bright_red', # file:line number
         },
     },
     default256 => {
@@ -57,6 +58,7 @@ $INDEX = 1 unless defined $INDEX;
             keyword => 21,
             symbol  => 51,
             linum   => 10,
+            strnum  => 197,
         },
     },
 );
@@ -161,12 +163,28 @@ sub dd {
     print dump(@_), "\n";
 }
 
+sub dde {
+    print dump(@_), "\n";
+
+    die;
+}
+
 sub ddx {
     my(undef, $file, $line) = caller;
     $file =~ s,.*[\\/],,;
     my $out = _col(linum=>"$file:$line: ") . dump(@_) . "\n";
     $out =~ s/^/# /gm;
     print $out;
+}
+
+sub ddxe {
+    my(undef, $file, $line) = caller;
+    $file =~ s,.*[\\/],,;
+    my $out = _col(linum=>"$file:$line: ") . dump(@_) . "\n";
+    $out =~ s/^/# /gm;
+    print $out;
+
+    die;
 }
 
 sub dumpf {
@@ -327,8 +345,14 @@ sub _dump
 	    }
 	    elsif (my $ntype = looks_like_number($$rval)) {
 		my $val = $ntype < 20 ? qq("$$rval") : $$rval;
-                my $col = $ntype =~ /^(5|13|8704)$/ ? "float":"number";
-                $out  = $val;
+		my $col = $ntype =~ /^(13|8704)$/ ? "float":"number";
+
+		# 1 = quoted intger, 5 = quoted float
+		if ($ntype == 1 || $ntype == 5) {
+		    $col = "strnum";
+		}
+
+		$out  = $val;
 		$cout = _col($col => $val);
 	    }
 	    else {
