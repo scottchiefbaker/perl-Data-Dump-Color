@@ -484,12 +484,14 @@ sub _dump
 		my $stddev = sqrt(($kstat_sum2 - $n * $avg * $avg) / ($n - 1));
 
 		# I am not actually very happy with this heuristics
-		if ($stddev / $kstat_max < 0.25) {
-		    $klen_pad = $kstat_max;
-		}
+		$klen_pad = $kstat_max;
+
 		if ($DEBUG) {
 		    push(@keys, "__S");
 		    push(@vals, sprintf("%.2f (%d/%.1f/%.1f)",
+					$stddev / $kstat_max,
+					$kstat_max, $avg, $stddev));
+		    push(@cvals, sprintf("%.2f (%d/%.1f/%.1f)",
 					$stddev / $kstat_max,
 					$kstat_max, $avg, $stddev));
 		}
